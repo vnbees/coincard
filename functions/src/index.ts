@@ -60,7 +60,7 @@ export const analyzeMoneyInImage = functions
       });
       console.log('Model initialization time:', Date.now() - modelInitStart, 'ms');
 
-      const prompt = "Analyze this image and tell me how much money is shown in the image. Please respond in Vietnamese language.";
+      const prompt = "Analyze this image and tell me: 1. How much money is shown in the image? 2. Are there any names visible that could be the recipient or sender? Please respond in Vietnamese language and format the response as 'Amount: [amount], Recipient: [name]' or 'Amount: [amount], Recipient: Not found' if no name is visible.";
 
       const aiRequestStart = Date.now();
       console.log('Sending request to Vertex AI...');

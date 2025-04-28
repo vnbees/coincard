@@ -11,16 +11,17 @@ import {
   ActivityIndicator,
   Alert,
 } from "react-native";
-import { Link, router } from "expo-router";
+import { router } from "expo-router";
 import * as FileSystem from "expo-file-system";
-import { initDatabase, saveRecord } from "./services/database";
+import { initDatabase, saveRecord } from "../services/database";
+import { FontAwesome } from "@expo/vector-icons";
 
 interface AnalysisResult {
   amount: number;
   recipient: string;
 }
 
-export default function App() {
+export default function CameraScreen() {
   const [facing, setFacing] = useState<CameraType>("back");
   const [permission, requestPermission] = useCameraPermissions();
   const [photo, setPhoto] = useState<string | null>(null);
@@ -43,10 +44,8 @@ export default function App() {
   if (!permission.granted) {
     return (
       <View style={styles.container}>
-        <Text style={styles.message}>
-          We need your permission to show the camera
-        </Text>
-        <Button onPress={requestPermission} title="grant permission" />
+        <Text style={styles.message}>Ứng dụng cần quyền truy cập camera</Text>
+        <Button onPress={requestPermission} title="Cấp quyền" />
       </View>
     );
   }
@@ -56,7 +55,6 @@ export default function App() {
   }
 
   const parseAnalysisResponse = (text: string): AnalysisResult => {
-    // Expected format: "Amount: [amount], Recipient: [name]"
     const amountMatch = text.match(/Amount: ([\d,]+)/);
     const recipientMatch = text.match(/Recipient: ([^,]+)/);
 
@@ -69,16 +67,10 @@ export default function App() {
   const analyzePhoto = async (uri: string) => {
     try {
       setAnalyzing(true);
-      const startTime = Date.now();
-
-      const base64StartTime = Date.now();
       const base64 = await FileSystem.readAsStringAsync(uri, {
         encoding: FileSystem.EncodingType.Base64,
       });
-      const base64Time = Date.now() - base64StartTime;
-      console.log("Base64 conversion time:", base64Time, "ms");
 
-      const apiStartTime = Date.now();
       const response = await fetch(
         "https://us-central1-coincard-bd6c8.cloudfunctions.net/analyzeMoneyInImage",
         {
@@ -91,8 +83,6 @@ export default function App() {
           }),
         }
       );
-      const apiResponseTime = Date.now() - apiStartTime;
-      console.log("API call time:", apiResponseTime, "ms");
 
       const data = await response.json();
       if (data.error) {
@@ -134,24 +124,16 @@ export default function App() {
     }
 
     try {
-      const record = {
+      await saveRecord({
         recipient: editableRecipient || "Unknown",
         amount: Number(editableAmount),
         imageUri: photo,
         createdAt: new Date().toISOString(),
-      };
-      console.log("Saving record:", record);
-
-      await saveRecord(record);
-      console.log("Record saved successfully");
-
+      });
       Alert.alert("Thành công", "Đã lưu thông tin thành công.", [
         {
           text: "OK",
-          onPress: () => {
-            console.log("Navigating to records screen");
-            router.push("/(tabs)/records");
-          },
+          onPress: () => router.push("/"),
         },
       ]);
     } catch (error) {
@@ -217,11 +199,18 @@ export default function App() {
 
   return (
     <View style={styles.container}>
-      <Link href="/(tabs)/records" asChild>
-        <TouchableOpacity style={styles.recordsButton}>
-          <Text style={styles.recordsButtonText}>Xem danh sách</Text>
-        </TouchableOpacity>
-      </Link>
+      <TouchableOpacity
+        style={styles.recordsButton}
+        onPress={() => router.push("/(tabs)/records")}
+      >
+        <FontAwesome
+          name="list"
+          size={20}
+          color="white"
+          style={styles.recordsIcon}
+        />
+        <Text style={styles.recordsButtonText}>Xem danh sách</Text>
+      </TouchableOpacity>
       <CameraView style={styles.camera} facing={facing} ref={cameraRef}>
         <View style={styles.buttonContainer}>
           <TouchableOpacity style={styles.button} onPress={toggleCameraFacing}>
@@ -242,7 +231,6 @@ export default function App() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    justifyContent: "center",
   },
   message: {
     textAlign: "center",
@@ -283,7 +271,7 @@ const styles = StyleSheet.create({
   },
   analysisContainer: {
     position: "absolute",
-    top: 20,
+    top: 60,
     left: 20,
     right: 20,
     backgroundColor: "rgba(0, 0, 0, 0.8)",
@@ -337,11 +325,17 @@ const styles = StyleSheet.create({
     right: 20,
     zIndex: 1,
     backgroundColor: "rgba(0, 0, 0, 0.7)",
-    padding: 10,
+    padding: 12,
     borderRadius: 8,
+    flexDirection: "row",
+    alignItems: "center",
+  },
+  recordsIcon: {
+    marginRight: 8,
   },
   recordsButtonText: {
     color: "white",
     fontSize: 14,
+    fontWeight: "600",
   },
 });
