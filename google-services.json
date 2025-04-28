@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "341801992688",
+    "project_id": "coincard-bd6c8",
+    "storage_bucket": "coincard-bd6c8.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:341801992688:android:310fff99683ff3e3c89d35",
+        "android_client_info": {
+          "package_name": "com.company.coincard"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDUvz_8C80S3mqEkFpgsjq1qlcOwXuyAbI"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
