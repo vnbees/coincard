@@ -5,28 +5,14 @@ import { VertexAI } from '@google-cloud/vertexai';
 // Initialize Firebase Admin
 admin.initializeApp();
 
-// Replace with your Vertex AI project information
-const projectId = "coincard-bd6c8"; // Updated to match your Firebase project ID
-const location = "us-central1"; // Updated to just the region name
+const projectId = "coincard-bd6c8";
+const location = "us-central1";
 
-// Initialize Vertex AI with more detailed configuration
 const vertexAI = new VertexAI({
   project: projectId,
   location: location,
   apiEndpoint: `${location}-aiplatform.googleapis.com`
 });
-
-// interface GenerateContentResponse {
-//   response?: {
-//     candidates?: Array<{
-//       content?: {
-//         parts?: Array<{
-//           text?: string;
-//         }>;
-//       };
-//     }>;
-//   };
-// }
 
 interface ErrorResponse {
   error: string;
@@ -37,44 +23,47 @@ interface SuccessResponse {
   result: string;
 }
 
-/**
- * Firebase Function to call Vertex AI large language model.
- */
-export const callVertexAI = functions
+export const analyzeMoneyInImage = functions
   .region('us-central1')
   .runWith({
-    // Increase memory and timeout for Vertex AI calls
     memory: '1GB',
     timeoutSeconds: 300,
   })
   .https.onRequest(async (request: functions.Request, response: functions.Response<SuccessResponse | ErrorResponse>) => {
     try {
-      // Enable CORS
       response.set('Access-Control-Allow-Origin', '*');
       response.set('Access-Control-Allow-Methods', 'GET, POST');
       response.set('Access-Control-Allow-Headers', 'Content-Type');
 
-      // Handle preflight request
       if (request.method === 'OPTIONS') {
         response.status(204).send({ result: '' });
         return;
       }
 
-      const prompt = request.query.prompt as string || request.body.prompt;
-
-      if (!prompt) {
-        response.status(400).send({ error: "Please provide a prompt." });
+      const imageBase64 = request.body.image;
+      if (!imageBase64) {
+        response.status(400).send({ error: "Please provide an image in base64 format." });
         return;
       }
 
       console.log('Initializing Vertex AI model...');
       const model = vertexAI.preview.getGenerativeModel({
-        model: "gemini-2.0-flash-lite-001",
+        model: "gemini-2.0-flash-001",
       });
 
-      console.log('Sending request to Vertex AI with prompt:', prompt);
+      const prompt = "Analyze this image and tell me how much money is shown in the image. Please respond in Vietnamese language.";
+
+      console.log('Sending request to Vertex AI...');
       const result = await model.generateContent({
-        contents: [{ role: "user", parts: [{ text: prompt }] }],
+        contents: [
+          {
+            role: "user",
+            parts: [
+              { text: prompt },
+              { inlineData: { mimeType: "image/jpeg", data: imageBase64 } }
+            ]
+          }
+        ],
       });
 
       console.log('Received response from Vertex AI:', result);
