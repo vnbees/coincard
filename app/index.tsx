@@ -41,10 +41,18 @@ export default function App() {
   const analyzePhoto = async (uri: string) => {
     try {
       setAnalyzing(true);
+      const startTime = Date.now();
+
+      // Measure base64 conversion time
+      const base64StartTime = Date.now();
       const base64 = await FileSystem.readAsStringAsync(uri, {
         encoding: FileSystem.EncodingType.Base64,
       });
+      const base64Time = Date.now() - base64StartTime;
+      console.log("Base64 conversion time:", base64Time, "ms");
 
+      // Measure API call time
+      const apiStartTime = Date.now();
       const response = await fetch(
         "https://us-central1-coincard-bd6c8.cloudfunctions.net/analyzeMoneyInImage",
         {
@@ -57,12 +65,36 @@ export default function App() {
           }),
         }
       );
+      const apiResponseTime = Date.now() - apiStartTime;
+      console.log("API call time:", apiResponseTime, "ms");
 
       const data = await response.json();
       if (data.error) {
         throw new Error(data.error);
       }
-      setAnalysis(data.result);
+
+      // Log server-side timing if available
+      if (data.timing) {
+        console.log("Server processing time:", data.timing.totalTime, "ms");
+        console.log(
+          "Vertex AI processing time:",
+          data.timing.vertexAiProcessingTime,
+          "ms"
+        );
+      }
+
+      const totalTime = Date.now() - startTime;
+      console.log("Total client-side processing time:", totalTime, "ms");
+
+      setAnalysis(
+        `${
+          data.result
+        }\n\nThời gian xử lý:\nTổng thời gian: ${totalTime}ms\nChuyển đổi ảnh: ${base64Time}ms\nGọi API: ${apiResponseTime}ms${
+          data.timing
+            ? `\nXử lý server: ${data.timing.totalTime}ms\nXử lý Vertex AI: ${data.timing.vertexAiProcessingTime}ms`
+            : ""
+        }`
+      );
     } catch (error) {
       console.error("Failed to analyze photo:", error);
       setAnalysis("Không thể phân tích ảnh. Vui lòng thử lại.");

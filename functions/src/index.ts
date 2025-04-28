@@ -21,6 +21,10 @@ interface ErrorResponse {
 
 interface SuccessResponse {
   result: string;
+  timing?: {
+    totalTime: number;
+    vertexAiProcessingTime: number;
+  };
 }
 
 export const analyzeMoneyInImage = functions
@@ -30,6 +34,9 @@ export const analyzeMoneyInImage = functions
     timeoutSeconds: 300,
   })
   .https.onRequest(async (request: functions.Request, response: functions.Response<SuccessResponse | ErrorResponse>) => {
+    const startTime = Date.now();
+    console.log('Function started at:', new Date(startTime).toISOString());
+    
     try {
       response.set('Access-Control-Allow-Origin', '*');
       response.set('Access-Control-Allow-Methods', 'GET, POST');
@@ -46,13 +53,16 @@ export const analyzeMoneyInImage = functions
         return;
       }
 
+      const modelInitStart = Date.now();
       console.log('Initializing Vertex AI model...');
       const model = vertexAI.preview.getGenerativeModel({
         model: "gemini-2.0-flash-001",
       });
+      console.log('Model initialization time:', Date.now() - modelInitStart, 'ms');
 
       const prompt = "Analyze this image and tell me how much money is shown in the image. Please respond in Vietnamese language.";
 
+      const aiRequestStart = Date.now();
       console.log('Sending request to Vertex AI...');
       const result = await model.generateContent({
         contents: [
@@ -65,6 +75,7 @@ export const analyzeMoneyInImage = functions
           }
         ],
       });
+      console.log('Vertex AI processing time:', Date.now() - aiRequestStart, 'ms');
 
       console.log('Received response from Vertex AI:', result);
 
@@ -73,10 +84,20 @@ export const analyzeMoneyInImage = functions
       }
 
       const generatedText = result.response.candidates[0].content.parts[0].text;
-      response.status(200).send({ result: generatedText });
+      const totalTime = Date.now() - startTime;
+      console.log('Total function execution time:', totalTime, 'ms');
+      
+      response.status(200).send({ 
+        result: generatedText,
+        timing: {
+          totalTime,
+          vertexAiProcessingTime: Date.now() - aiRequestStart,
+        }
+      });
       
     } catch (error) {
-      console.error("Detailed error in Vertex AI call:", error);
+      const errorTime = Date.now() - startTime;
+      console.error(`Error occurred after ${errorTime}ms:`, error);
       let errorMessage = 'Unknown error occurred';
       
       if (error instanceof Error) {
