@@ -1,84 +1,61 @@
-import * as SQLite from 'expo-sqlite';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 export interface MoneyRecord {
-  id?: number;
+  id: number;
   recipient: string;
   amount: number;
   imageUri: string;
   createdAt: string;
 }
 
-let db: any = null;
+const STORAGE_KEY = '@money_records';
+let isInitializing = false;
+let currentId = 1;
 
-const getDB = (): any => {
-  if (!db) {
-    db = SQLite.openDatabaseSync('coincard.db');
+const getNextId = async (): Promise<number> => {
+  try {
+    const records = await getAllRecords();
+    if (records.length === 0) return 1;
+    const maxId = Math.max(...records.map(record => record.id));
+    return maxId + 1;
+  } catch (error) {
+    console.error('Error getting next ID:', error);
+    return currentId++;
   }
-  return db;
-};
-
-export const runQuery = async (query: string, params: any[] = []): Promise<any[]> => {
-  return new Promise((resolve, reject) => {
-    const database = getDB();
-    database.transaction((tx: any) => {
-      tx.executeSql(
-        query,
-        params,
-        (_: any, result: any) => {
-          const rows = result.rows;
-          const arr = [];
-          for (let i = 0; i < rows.length; i++) {
-            arr.push(rows.item(i));
-          }
-          resolve(arr);
-        },
-        (_: any, error: any) => {
-          reject(error);
-          return false;
-        }
-      );
-    });
-  });
-};
-
-export const runWriteQuery = async (query: string, params: any[] = []): Promise<void> => {
-  return new Promise((resolve, reject) => {
-    const database = getDB();
-    database.transaction((tx: any) => {
-      tx.executeSql(
-        query,
-        params,
-        () => resolve(),
-        (_: any, error: any) => {
-          reject(error);
-          return false;
-        }
-      );
-    });
-  });
 };
 
 export const initDatabase = async (): Promise<void> => {
+  if (isInitializing) {
+    console.log('Database initialization already in progress');
+    return;
+  }
+
+  isInitializing = true;
+
   try {
-    const query = `CREATE TABLE IF NOT EXISTS money_records (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      recipient TEXT NOT NULL,
-      amount REAL NOT NULL,
-      imageUri TEXT NOT NULL,
-      createdAt TEXT NOT NULL
-    )`;
-    await runWriteQuery(query);
+    console.log('Initializing storage...');
+    const records = await AsyncStorage.getItem(STORAGE_KEY);
+    if (!records) {
+      await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify([]));
+    }
+    console.log('Storage initialized successfully');
   } catch (error) {
-    console.error('Error creating database:', error);
+    console.error('Error initializing storage:', error);
     throw error;
+  } finally {
+    isInitializing = false;
   }
 };
 
 export const saveRecord = async (record: Omit<MoneyRecord, 'id'>): Promise<void> => {
-  const query = 'INSERT INTO money_records (recipient, amount, imageUri, createdAt) VALUES (?, ?, ?, ?)';
-  const params = [record.recipient, record.amount, record.imageUri, record.createdAt];
   try {
-    await runWriteQuery(query, params);
+    console.log('Saving record:', record);
+    const records = await getAllRecords();
+    const newId = await getNextId();
+    const newRecord = { ...record, id: newId };
+    records.push(newRecord);
+    await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(records));
+    console.log('Record saved successfully');
   } catch (error) {
     console.error('Error saving record:', error);
     throw error;
@@ -87,7 +64,11 @@ export const saveRecord = async (record: Omit<MoneyRecord, 'id'>): Promise<void>
 
 export const getAllRecords = async (): Promise<MoneyRecord[]> => {
   try {
-    return await runQuery('SELECT * FROM money_records ORDER BY createdAt DESC');
+    console.log('Fetching all records...');
+    const records = await AsyncStorage.getItem(STORAGE_KEY);
+    const parsedRecords = records ? JSON.parse(records) : [];
+    console.log(`Found ${parsedRecords.length} records`);
+    return parsedRecords;
   } catch (error) {
     console.error('Error getting records:', error);
     throw error;
@@ -96,10 +77,13 @@ export const getAllRecords = async (): Promise<MoneyRecord[]> => {
 
 export const searchRecords = async (query: string): Promise<MoneyRecord[]> => {
   try {
-    return await runQuery(
-      'SELECT * FROM money_records WHERE recipient LIKE ?',
-      [`%${query}%`]
+    console.log('Searching records with query:', query);
+    const records = await getAllRecords();
+    const filteredRecords = records.filter(record => 
+      record.recipient.toLowerCase().includes(query.toLowerCase())
     );
+    console.log(`Found ${filteredRecords.length} matching records`);
+    return filteredRecords;
   } catch (error) {
     console.error('Error searching records:', error);
     throw error;

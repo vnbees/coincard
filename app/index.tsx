@@ -1,5 +1,5 @@
 import { CameraView, CameraType, useCameraPermissions } from "expo-camera";
-import { useEffect, useRef, useState } from "react";
+import { useRef, useState } from "react";
 import {
   Button,
   StyleSheet,
@@ -13,7 +13,7 @@ import {
 } from "react-native";
 import { Link, router } from "expo-router";
 import * as FileSystem from "expo-file-system";
-import { initDatabase, saveRecord } from "./services/database";
+import { saveRecord } from "./services/database";
 
 interface AnalysisResult {
   amount: number;
@@ -31,10 +31,6 @@ export default function App() {
   const [editableRecipient, setEditableRecipient] = useState("");
   const [editableAmount, setEditableAmount] = useState("");
   const cameraRef = useRef<CameraView>(null);
-
-  useEffect(() => {
-    initDatabase();
-  }, []);
 
   if (!permission) {
     return <View />;
