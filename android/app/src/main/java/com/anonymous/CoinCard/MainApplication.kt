@@ -1,4 +1,4 @@
-package com.coincard
+package com.anonymous.CoinCard
 
 import android.app.Application
 import android.content.res.Configuration
