@@ -10,11 +10,17 @@ import {
   Image,
   ActivityIndicator,
   Alert,
+  ScrollView,
 } from "react-native";
 import { router } from "expo-router";
 import { useIsFocused } from "@react-navigation/native";
 import * as FileSystem from "expo-file-system";
-import { initDatabase, saveRecord } from "../services/database";
+import {
+  initDatabase,
+  saveRecord,
+  getAllHashtags,
+  addNewHashtags,
+} from "../services/database";
 import { FontAwesome } from "@expo/vector-icons";
 
 interface AnalysisResult {
@@ -32,12 +38,25 @@ export default function CameraScreen() {
   );
   const [editableRecipient, setEditableRecipient] = useState("");
   const [editableAmount, setEditableAmount] = useState("");
+  const [newHashtag, setNewHashtag] = useState("");
+  const [selectedHashtags, setSelectedHashtags] = useState<string[]>([]);
+  const [availableHashtags, setAvailableHashtags] = useState<string[]>([]);
   const cameraRef = useRef<CameraView>(null);
   const isFocused = useIsFocused();
 
   useEffect(() => {
     initDatabase();
+    loadHashtags();
   }, []);
+
+  const loadHashtags = async () => {
+    try {
+      const hashtags = await getAllHashtags();
+      setAvailableHashtags(hashtags);
+    } catch (error) {
+      console.error("Error loading hashtags:", error);
+    }
+  };
 
   if (!permission) {
     return <View />;
@@ -98,7 +117,6 @@ export default function CameraScreen() {
       );
       setEditableAmount(result.amount.toString());
     } catch (error) {
-      console.error("Failed to analyze photo:", error);
       Alert.alert("Lỗi", "Không thể phân tích ảnh. Vui lòng thử lại.");
     } finally {
       setAnalyzing(false);
@@ -114,7 +132,7 @@ export default function CameraScreen() {
           await analyzePhoto(result.uri);
         }
       } catch (error) {
-        console.error("Failed to take photo:", error);
+        Alert.alert("Lỗi", "Không thể chụp ảnh. Vui lòng thử lại.");
       }
     }
   };
@@ -126,12 +144,20 @@ export default function CameraScreen() {
     }
 
     try {
+      // Save the record with hashtags
       await saveRecord({
         recipient: editableRecipient || "Unknown",
         amount: Number(editableAmount),
         imageUri: photo,
         createdAt: new Date().toISOString(),
+        hashtags: selectedHashtags,
       });
+
+      // If we have any new hashtags, save them
+      if (selectedHashtags.length > 0) {
+        await addNewHashtags(selectedHashtags);
+      }
+
       Alert.alert("Thành công", "Đã lưu thông tin thành công.", [
         {
           text: "OK",
@@ -139,7 +165,6 @@ export default function CameraScreen() {
         },
       ]);
     } catch (error) {
-      console.error("Failed to save record:", error);
       Alert.alert("Lỗi", "Không thể lưu thông tin. Vui lòng thử lại.");
     }
   };
@@ -149,6 +174,27 @@ export default function CameraScreen() {
     setAnalysisResult(null);
     setEditableRecipient("");
     setEditableAmount("");
+  };
+
+  const handleHashtagSelect = (hashtag: string) => {
+    setSelectedHashtags((prev) =>
+      prev.includes(hashtag)
+        ? prev.filter((h) => h !== hashtag)
+        : [...prev, hashtag]
+    );
+  };
+
+  const handleAddHashtag = async () => {
+    if (!newHashtag.trim()) return;
+
+    const hashtag = newHashtag.trim();
+    try {
+      await addNewHashtags([hashtag]);
+      setAvailableHashtags((prev) => [...prev, hashtag]);
+      setNewHashtag("");
+    } catch (error) {
+      console.error("Error adding hashtag:", error);
+    }
   };
 
   if (photo) {
@@ -177,6 +223,76 @@ export default function CameraScreen() {
               keyboardType="numeric"
               placeholderTextColor="#999"
             />
+            <View style={styles.hashtagsContainer}>
+              <Text style={styles.hashtagsLabel}>Hashtags:</Text>
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={styles.hashtagsList}
+              >
+                {selectedHashtags.map((hashtag) => (
+                  <TouchableOpacity
+                    key={hashtag}
+                    style={styles.hashtagItem}
+                    onPress={() => handleHashtagSelect(hashtag)}
+                  >
+                    <Text style={styles.hashtagText}>{hashtag}</Text>
+                    <FontAwesome
+                      name="times"
+                      size={14}
+                      color="white"
+                      style={styles.hashtagIcon}
+                    />
+                  </TouchableOpacity>
+                ))}
+                <TextInput
+                  style={styles.inputHashtag}
+                  placeholder="Thêm hashtag mới"
+                  value={newHashtag}
+                  onChangeText={setNewHashtag}
+                  placeholderTextColor="#999"
+                />
+                <TouchableOpacity
+                  style={styles.addHashtagButton}
+                  onPress={handleAddHashtag}
+                >
+                  <Text style={styles.addHashtagButtonText}>Thêm</Text>
+                </TouchableOpacity>
+              </ScrollView>
+
+              {availableHashtags.length > 0 && (
+                <View style={styles.availableHashtagsContainer}>
+                  <Text style={styles.availableHashtagsLabel}>
+                    Hashtag đã có:
+                  </Text>
+                  <ScrollView
+                    horizontal
+                    showsHorizontalScrollIndicator={false}
+                    contentContainerStyle={styles.availableHashtagsList}
+                  >
+                    {availableHashtags
+                      .filter((tag) => !selectedHashtags.includes(tag))
+                      .map((hashtag) => (
+                        <TouchableOpacity
+                          key={hashtag}
+                          style={styles.availableHashtagItem}
+                          onPress={() => handleHashtagSelect(hashtag)}
+                        >
+                          <Text style={styles.availableHashtagText}>
+                            {hashtag}
+                          </Text>
+                          <FontAwesome
+                            name="plus"
+                            size={14}
+                            color="#3498db"
+                            style={styles.hashtagIcon}
+                          />
+                        </TouchableOpacity>
+                      ))}
+                  </ScrollView>
+                </View>
+              )}
+            </View>
             <View style={styles.buttonRow}>
               <TouchableOpacity
                 style={[styles.button, styles.secondaryButton]}
@@ -298,6 +414,55 @@ const styles = StyleSheet.create({
     marginBottom: 12,
     fontSize: 16,
   },
+  hashtagsContainer: {
+    marginBottom: 12,
+  },
+  hashtagsLabel: {
+    color: "white",
+    fontSize: 16,
+    marginBottom: 8,
+  },
+  hashtagsList: {
+    flexDirection: "row",
+    flexWrap: "nowrap",
+  },
+  hashtagItem: {
+    backgroundColor: "#2ecc71",
+    borderRadius: 16,
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+    marginRight: 8,
+    flexDirection: "row",
+    alignItems: "center",
+  },
+  hashtagText: {
+    color: "white",
+    fontSize: 14,
+    marginRight: 4,
+  },
+  hashtagIcon: {
+    marginLeft: 4,
+  },
+  inputHashtag: {
+    backgroundColor: "white",
+    borderRadius: 8,
+    padding: 12,
+    marginRight: 8,
+    fontSize: 16,
+    minWidth: 120,
+  },
+  addHashtagButton: {
+    backgroundColor: "#3498db",
+    borderRadius: 8,
+    padding: 12,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  addHashtagButtonText: {
+    color: "white",
+    fontSize: 16,
+    fontWeight: "bold",
+  },
   buttonRow: {
     flexDirection: "row",
     justifyContent: "space-between",
@@ -344,5 +509,31 @@ const styles = StyleSheet.create({
     color: "white",
     fontSize: 14,
     fontWeight: "600",
+  },
+  availableHashtagsContainer: {
+    marginTop: 12,
+  },
+  availableHashtagsLabel: {
+    color: "white",
+    fontSize: 16,
+    marginBottom: 8,
+  },
+  availableHashtagsList: {
+    flexDirection: "row",
+    flexWrap: "nowrap",
+  },
+  availableHashtagItem: {
+    backgroundColor: "#34495e",
+    borderRadius: 16,
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+    marginRight: 8,
+    flexDirection: "row",
+    alignItems: "center",
+  },
+  availableHashtagText: {
+    color: "white",
+    fontSize: 14,
+    marginRight: 4,
   },
 });
