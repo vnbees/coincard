@@ -75,6 +75,24 @@ export default function CameraScreen() {
     setFacing((current) => (current === "back" ? "front" : "back"));
   }
 
+  // Format a number as currency with commas (e.g., 1000 -> 1,000)
+  const formatMoney = (value: string): string => {
+    // Remove all non-digit characters
+    const cleanValue = value.replace(/[^0-9]/g, "");
+
+    // Convert to number and format with commas
+    if (cleanValue) {
+      const number = parseInt(cleanValue, 10);
+      return number.toLocaleString("en-US");
+    }
+    return "";
+  };
+
+  // Parse formatted money string back to a number
+  const parseFormattedMoney = (value: string): number => {
+    return Number(value.replace(/,/g, ""));
+  };
+
   const parseAnalysisResponse = (text: string): AnalysisResult => {
     const amountMatch = text.match(/Amount: ([\d,]+)/);
     const recipientMatch = text.match(/Recipient: ([^,]+)/);
@@ -166,7 +184,7 @@ export default function CameraScreen() {
       // Save the record with hashtags
       await saveRecord({
         recipient: editableRecipient || "Unknown",
-        amount: Number(editableAmount),
+        amount: parseFormattedMoney(editableAmount),
         imageUri: photo,
         createdAt: new Date().toISOString(),
         hashtags: selectedHashtags,
@@ -179,8 +197,19 @@ export default function CameraScreen() {
 
       Alert.alert("Thành công", "Đã lưu thông tin thành công.", [
         {
-          text: "OK",
-          onPress: () => router.push("/"),
+          text: "Chụp ảnh mới",
+          onPress: () => {
+            // Reset state for a new photo
+            setPhoto(null);
+            setAnalysisResult(null);
+            setEditableRecipient("");
+            setEditableAmount("");
+            setSelectedHashtags([]);
+          },
+        },
+        {
+          text: "Về danh sách",
+          onPress: () => router.push("/(tabs)/records"),
         },
       ]);
     } catch (error) {
@@ -237,7 +266,7 @@ export default function CameraScreen() {
             <TextInput
               style={styles.input}
               placeholder="Số tiền"
-              value={editableAmount}
+              value={formatMoney(editableAmount)}
               onChangeText={setEditableAmount}
               keyboardType="numeric"
               placeholderTextColor="#999"

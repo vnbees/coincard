@@ -181,9 +181,7 @@ export default function RecordsScreen() {
     }
 
     try {
-      const amountNumber = parseFloat(
-        newAmount.replace(/\./g, "").replace(/,/g, ".")
-      );
+      const amountNumber = parseFormattedMoney(newAmount);
 
       if (isNaN(amountNumber)) {
         Alert.alert("Lỗi", "Số tiền không hợp lệ.");
@@ -259,9 +257,7 @@ export default function RecordsScreen() {
     }
 
     try {
-      const amountNumber = parseFloat(
-        newAmount.replace(/\./g, "").replace(/,/g, ".")
-      );
+      const amountNumber = parseFormattedMoney(newAmount);
 
       if (isNaN(amountNumber)) {
         Alert.alert("Lỗi", "Số tiền không hợp lệ.");
@@ -352,6 +348,24 @@ export default function RecordsScreen() {
     }
     // Tải lại dữ liệu với cách sắp xếp mới
     loadRecords(searchQuery);
+  };
+
+  // Format a number as currency with commas (e.g., 1000 -> 1,000)
+  const formatMoney = (value: string): string => {
+    // Remove all non-digit characters
+    const cleanValue = value.replace(/[^0-9]/g, "");
+
+    // Convert to number and format with commas
+    if (cleanValue) {
+      const number = parseInt(cleanValue, 10);
+      return number.toLocaleString("en-US");
+    }
+    return "";
+  };
+
+  // Parse formatted money string back to a number
+  const parseFormattedMoney = (value: string): number => {
+    return Number(value.replace(/,/g, ""));
   };
 
   return (
@@ -492,8 +506,8 @@ export default function RecordsScreen() {
             <TextInput
               style={styles.input}
               placeholder="Số tiền"
-              value={newAmount}
-              onChangeText={setNewAmount}
+              value={formatMoney(newAmount)}
+              onChangeText={(text) => setNewAmount(text)}
               keyboardType="numeric"
             />
 
@@ -612,8 +626,8 @@ export default function RecordsScreen() {
             <TextInput
               style={styles.input}
               placeholder="Số tiền"
-              value={newAmount}
-              onChangeText={setNewAmount}
+              value={formatMoney(newAmount)}
+              onChangeText={(text) => setNewAmount(text)}
               keyboardType="numeric"
             />
 

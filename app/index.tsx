@@ -47,6 +47,24 @@ export default function App() {
     );
   }
 
+  // Format a number as currency with commas (e.g., 1000 -> 1,000)
+  const formatMoney = (value: string): string => {
+    // Remove all non-digit characters
+    const cleanValue = value.replace(/[^0-9]/g, "");
+
+    // Convert to number and format with commas
+    if (cleanValue) {
+      const number = parseInt(cleanValue, 10);
+      return number.toLocaleString("en-US");
+    }
+    return "";
+  };
+
+  // Parse formatted money string back to a number
+  const parseFormattedMoney = (value: string): number => {
+    return Number(value.replace(/,/g, ""));
+  };
+
   function toggleCameraFacing() {
     setFacing((current) => (current === "back" ? "front" : "back"));
   }
@@ -197,7 +215,18 @@ export default function App() {
 
       Alert.alert("Thành công", "Đã lưu thông tin thành công.", [
         {
-          text: "OK",
+          text: "Chụp ảnh mới",
+          onPress: () => {
+            console.log("Taking new photo");
+            // Reset state for a new photo
+            setPhoto(null);
+            setAnalysisResult(null);
+            setEditableRecipient("");
+            setEditableAmount("");
+          },
+        },
+        {
+          text: "Xem danh sách",
           onPress: () => {
             console.log("Navigating to records screen");
             router.push("/(tabs)/records");
@@ -238,8 +267,8 @@ export default function App() {
             <TextInput
               style={styles.input}
               placeholder="Số tiền"
-              value={editableAmount}
-              onChangeText={setEditableAmount}
+              value={formatMoney(editableAmount)}
+              onChangeText={(text) => setEditableAmount(parseFormattedMoney(text).toString())}
               keyboardType="numeric"
               placeholderTextColor="#999"
             />
