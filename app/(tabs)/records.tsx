@@ -214,25 +214,26 @@ export default function RecordsScreen() {
       )}
 
       {availableHashtags.length > 0 && (
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          style={styles.filtersScrollView}
-          contentContainerStyle={styles.filtersContainer}
-        >
-          {availableHashtags.map((tag, index) => (
-            <TouchableOpacity
-              key={index}
-              style={[
-                styles.filterChip,
-                activeHashtagFilter === tag && styles.activeFilterChip,
-              ]}
-              onPress={() => handleHashtagFilter(tag)}
-            >
-              <Text style={styles.filterChipText}>{tag}</Text>
-            </TouchableOpacity>
-          ))}
-        </ScrollView>
+        <View style={styles.filtersWrapper}>
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.filtersContainer}
+          >
+            {availableHashtags.map((tag, index) => (
+              <TouchableOpacity
+                key={index}
+                style={[
+                  styles.filterChip,
+                  activeHashtagFilter === tag && styles.activeFilterChip,
+                ]}
+                onPress={() => handleHashtagFilter(tag)}
+              >
+                <Text style={styles.filterChipText}>{tag}</Text>
+              </TouchableOpacity>
+            ))}
+          </ScrollView>
+        </View>
       )}
 
       <TouchableOpacity
@@ -527,10 +528,14 @@ const styles = StyleSheet.create({
   activeFilterContainer: {
     flexDirection: "row",
     alignItems: "center",
-    padding: 8,
+    justifyContent: "center",
+    paddingVertical: 8,
+    paddingHorizontal: 12,
     backgroundColor: "#3498db",
     borderRadius: 8,
-    margin: 16,
+    marginHorizontal: 16,
+    marginBottom: 12,
+    flexWrap: "wrap",
   },
   filterLabel: {
     color: "#fff",
@@ -540,10 +545,12 @@ const styles = StyleSheet.create({
   activeFilter: {
     flexDirection: "row",
     alignItems: "center",
+    justifyContent: "space-between",
     backgroundColor: "#2980b9",
     borderRadius: 8,
     padding: 8,
     flex: 1,
+    minHeight: 36,
   },
   activeFilterText: {
     color: "#fff",
@@ -561,14 +568,18 @@ const styles = StyleSheet.create({
   },
   filtersContainer: {
     paddingHorizontal: 16,
+    flexDirection: "row",
+    alignItems: "center",
   },
   filterChip: {
     backgroundColor: "#ecf0f1",
     borderRadius: 16,
-    paddingVertical: 6,
-    paddingHorizontal: 12,
+    paddingVertical: 8,
+    paddingHorizontal: 14,
     marginRight: 8,
     marginBottom: 8,
+    alignItems: "center",
+    justifyContent: "center",
   },
   activeFilterChip: {
     backgroundColor: "#3498db",
@@ -577,6 +588,7 @@ const styles = StyleSheet.create({
     color: "#2c3e50",
     fontSize: 14,
     fontWeight: "bold",
+    textAlign: "center",
   },
   newHashtagContainer: {
     flexDirection: "row",
@@ -626,5 +638,11 @@ const styles = StyleSheet.create({
   },
   tagAddIcon: {
     marginLeft: 4,
+  },
+  filtersWrapper: {
+    overflow: "hidden",
+    borderRadius: 8,
+    marginHorizontal: 16,
+    marginBottom: 12,
   },
 });
