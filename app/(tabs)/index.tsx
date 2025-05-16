@@ -79,7 +79,26 @@ export default function CameraScreen() {
     const amountMatch = text.match(/Amount: ([\d,]+)/);
     const recipientMatch = text.match(/Recipient: ([^,]+)/);
 
-    const amount = amountMatch ? Number(amountMatch[1].replace(/,/g, "")) : 0;
+    let amount = 0;
+    if (amountMatch) {
+      const rawAmount = amountMatch[1].replace(/,/g, "");
+      amount = Number(rawAmount);
+
+      // Fix for Vietnamese currency - adjust short numbers
+      // In Vietnam, common amounts are in thousands, so small numbers likely need conversion
+      // Only apply this logic for amounts less than 1000 (likely missing thousands/millions)
+      if (amount > 0 && amount < 1000) {
+        amount *= 1000; // Convert to thousands
+      }
+      // For numbers between 1000-10000, check if they might be in millions
+      else if (amount >= 1000 && amount < 10000) {
+        // Most transactions in Vietnam are at least tens of thousands
+        if (amount < 1000000) {
+          amount *= 1000; // Convert to thousands
+        }
+      }
+    }
+
     const recipient = recipientMatch ? recipientMatch[1].trim() : "Not found";
 
     return { amount, recipient };
