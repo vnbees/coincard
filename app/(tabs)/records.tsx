@@ -25,6 +25,14 @@ import {
 import { useFocusEffect } from "@react-navigation/native";
 import { FontAwesome } from "@expo/vector-icons";
 
+// Enum để định nghĩa các kiểu sắp xếp
+enum SortOrder {
+  DESC = "desc", // Giảm dần
+  ASC = "asc", // Tăng dần
+  NEWEST = "newest", // Mới nhất
+  OLDEST = "oldest", // Cũ nhất
+}
+
 export default function RecordsScreen() {
   const [records, setRecords] = React.useState<MoneyRecord[]>([]);
   const [searchQuery, setSearchQuery] = React.useState("");
@@ -41,6 +49,7 @@ export default function RecordsScreen() {
   );
   const [totalAmount, setTotalAmount] = useState<number>(0);
   const [currentRecord, setCurrentRecord] = useState<MoneyRecord | null>(null);
+  const [sortOrder, setSortOrder] = useState<SortOrder>(SortOrder.DESC); // Mặc định sắp xếp giảm dần
 
   // Tính tổng số tiền mỗi khi danh sách records thay đổi
   useEffect(() => {
@@ -64,7 +73,27 @@ export default function RecordsScreen() {
         );
       }
 
-      setRecords(data);
+      // Sort records based on current sortOrder
+      const sortedData = [...data].sort((a, b) => {
+        switch (sortOrder) {
+          case SortOrder.DESC: // Giảm dần theo số tiền
+            return b.amount - a.amount;
+          case SortOrder.ASC: // Tăng dần theo số tiền
+            return a.amount - b.amount;
+          case SortOrder.NEWEST: // Mới nhất (theo ngày)
+            return (
+              new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+            );
+          case SortOrder.OLDEST: // Cũ nhất (theo ngày)
+            return (
+              new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
+            );
+          default:
+            return 0;
+        }
+      });
+
+      setRecords(sortedData);
     } catch (error) {
       console.error("Error loading records:", error);
     }
@@ -290,6 +319,12 @@ export default function RecordsScreen() {
     </View>
   );
 
+  // Hàm để thay đổi thứ tự sắp xếp
+  const handleChangeSortOrder = (newOrder: SortOrder) => {
+    setSortOrder(newOrder);
+    loadRecords(searchQuery);
+  };
+
   return (
     <View style={styles.container}>
       <TextInput
@@ -337,6 +372,81 @@ export default function RecordsScreen() {
         </View>
       )}
 
+      {/* UI lựa chọn cách sắp xếp */}
+      <View style={styles.sortContainer}>
+        <Text style={styles.sortLabel}>Sắp xếp:</Text>
+        <View style={styles.sortButtonsContainer}>
+          <TouchableOpacity
+            style={[
+              styles.sortButton,
+              sortOrder === SortOrder.DESC && styles.activeSortButton,
+            ]}
+            onPress={() => handleChangeSortOrder(SortOrder.DESC)}
+          >
+            <Text
+              style={[
+                styles.sortButtonText,
+                sortOrder === SortOrder.DESC && styles.activeSortButtonText,
+              ]}
+            >
+              Số tiền tăng dần
+            </Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={[
+              styles.sortButton,
+              sortOrder === SortOrder.ASC && styles.activeSortButton,
+            ]}
+            onPress={() => handleChangeSortOrder(SortOrder.ASC)}
+          >
+            <Text
+              style={[
+                styles.sortButtonText,
+                sortOrder === SortOrder.ASC && styles.activeSortButtonText,
+              ]}
+            >
+              Số tiền giảm dần
+            </Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={[
+              styles.sortButton,
+              sortOrder === SortOrder.NEWEST && styles.activeSortButton,
+            ]}
+            onPress={() => handleChangeSortOrder(SortOrder.NEWEST)}
+          >
+            <Text
+              style={[
+                styles.sortButtonText,
+                sortOrder === SortOrder.NEWEST && styles.activeSortButtonText,
+              ]}
+            >
+              Cũ nhất
+            </Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={[
+              styles.sortButton,
+              sortOrder === SortOrder.OLDEST && styles.activeSortButton,
+            ]}
+            onPress={() => handleChangeSortOrder(SortOrder.OLDEST)}
+          >
+            <Text
+              style={[
+                styles.sortButtonText,
+                sortOrder === SortOrder.OLDEST && styles.activeSortButtonText,
+              ]}
+            >
+              Mới nhất
+            </Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+
+      {/* Nút thêm giao dịch mới */}
       <TouchableOpacity
         style={styles.addButton}
         onPress={() => setModalVisible(true)}
@@ -906,5 +1016,42 @@ const styles = StyleSheet.create({
     backgroundColor: "#e74c3c",
     borderRadius: 8,
     padding: 8,
+  },
+  sortContainer: {
+    backgroundColor: "#f1f1f1",
+    borderRadius: 8,
+    padding: 16,
+    margin: 16,
+    marginTop: 0,
+    marginBottom: 12,
+  },
+  sortLabel: {
+    fontSize: 16,
+    fontWeight: "bold",
+    marginBottom: 8,
+  },
+  sortButtonsContainer: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+  },
+  sortButton: {
+    flex: 1,
+    borderRadius: 8,
+    padding: 12,
+    marginRight: 8,
+    backgroundColor: "#ecf0f1",
+    alignItems: "center",
+  },
+  activeSortButton: {
+    backgroundColor: "#3498db",
+  },
+  sortButtonText: {
+    color: "#2c3e50",
+    fontSize: 14,
+    fontWeight: "bold",
+    textAlign: "center",
+  },
+  activeSortButtonText: {
+    color: "#fff",
   },
 });
