@@ -1,4 +1,4 @@
-import React, { useCallback, useState } from "react";
+import React, { useCallback, useState, useEffect } from "react";
 import {
   View,
   Text,
@@ -36,6 +36,17 @@ export default function RecordsScreen() {
   const [activeHashtagFilter, setActiveHashtagFilter] = useState<string | null>(
     null
   );
+  const [totalAmount, setTotalAmount] = useState<number>(0);
+
+  // Tính tổng số tiền mỗi khi danh sách records thay đổi
+  useEffect(() => {
+    calculateTotalAmount();
+  }, [records]);
+
+  const calculateTotalAmount = () => {
+    const sum = records.reduce((total, record) => total + record.amount, 0);
+    setTotalAmount(sum);
+  };
 
   const loadRecords = async (query: string = "") => {
     try {
@@ -242,6 +253,15 @@ export default function RecordsScreen() {
       >
         <Text style={styles.addButtonText}>+ Thêm giao dịch mới</Text>
       </TouchableOpacity>
+
+      {/* Hiển thị tổng số tiền */}
+      <View style={styles.totalAmountContainer}>
+        <Text style={styles.totalAmountLabel}>Tổng số tiền:</Text>
+        <Text style={styles.totalAmountValue}>
+          {totalAmount.toLocaleString()} VND
+        </Text>
+      </View>
+
       <FlatList
         style={styles.list}
         data={records}
@@ -644,5 +664,22 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     marginHorizontal: 16,
     marginBottom: 12,
+  },
+  totalAmountContainer: {
+    padding: 16,
+    backgroundColor: "#f9f9f9",
+    borderTopWidth: 1,
+    borderTopColor: "#eee",
+    marginBottom: 16,
+  },
+  totalAmountLabel: {
+    fontSize: 16,
+    fontWeight: "bold",
+    marginBottom: 8,
+  },
+  totalAmountValue: {
+    fontSize: 18,
+    fontWeight: "bold",
+    color: "#2ecc71",
   },
 });
