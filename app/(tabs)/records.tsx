@@ -16,6 +16,8 @@ import {
   getAllRecords,
   searchRecords,
   saveRecord,
+  updateRecord,
+  deleteRecord,
   MoneyRecord,
   getAllHashtags,
   addNewHashtags,
@@ -28,6 +30,7 @@ export default function RecordsScreen() {
   const [searchQuery, setSearchQuery] = React.useState("");
   const [refreshing, setRefreshing] = React.useState(false);
   const [modalVisible, setModalVisible] = useState(false);
+  const [editModalVisible, setEditModalVisible] = useState(false);
   const [newRecipient, setNewRecipient] = useState("");
   const [newAmount, setNewAmount] = useState("");
   const [newHashtag, setNewHashtag] = useState("");
@@ -37,6 +40,7 @@ export default function RecordsScreen() {
     null
   );
   const [totalAmount, setTotalAmount] = useState<number>(0);
+  const [currentRecord, setCurrentRecord] = useState<MoneyRecord | null>(null);
 
   // Tính tổng số tiền mỗi khi danh sách records thay đổi
   useEffect(() => {
@@ -168,6 +172,82 @@ export default function RecordsScreen() {
     }
   };
 
+  const handleEditRecord = (record: MoneyRecord) => {
+    setCurrentRecord(record);
+    setNewRecipient(record.recipient);
+    setNewAmount(record.amount.toString());
+    setSelectedHashtags(record.hashtags || []);
+    setEditModalVisible(true);
+  };
+
+  const handleDeleteRecord = (id: number) => {
+    Alert.alert(
+      "Xác nhận xóa",
+      "Bạn có chắc muốn xóa giao dịch này không?",
+      [
+        {
+          text: "Hủy",
+          style: "cancel",
+        },
+        {
+          text: "Xóa",
+          style: "destructive",
+          onPress: async () => {
+            try {
+              await deleteRecord(id);
+              Alert.alert("Thành công", "Đã xóa giao dịch thành công");
+              await loadRecords(searchQuery);
+            } catch (error) {
+              Alert.alert("Lỗi", "Không thể xóa giao dịch. Vui lòng thử lại.");
+            }
+          },
+        },
+      ]
+    );
+  };
+
+  const handleUpdateRecord = async () => {
+    if (!currentRecord || !newRecipient || !newAmount) {
+      Alert.alert("Lỗi", "Vui lòng nhập đầy đủ thông tin.");
+      return;
+    }
+
+    try {
+      const amountNumber = parseFloat(
+        newAmount.replace(/\./g, "").replace(/,/g, ".")
+      );
+
+      if (isNaN(amountNumber)) {
+        Alert.alert("Lỗi", "Số tiền không hợp lệ.");
+        return;
+      }
+
+      const updatedRecord: MoneyRecord = {
+        ...currentRecord,
+        recipient: newRecipient,
+        amount: amountNumber,
+        hashtags: selectedHashtags,
+      };
+
+      await updateRecord(updatedRecord);
+      Alert.alert("Thành công", "Đã cập nhật giao dịch thành công.");
+
+      // Reset form and close modal
+      setNewRecipient("");
+      setNewAmount("");
+      setSelectedHashtags([]);
+      setCurrentRecord(null);
+      setEditModalVisible(false);
+
+      // Refresh the list
+      loadRecords(searchQuery);
+      loadHashtags();
+    } catch (error) {
+      console.error("Error updating record:", error);
+      Alert.alert("Lỗi", "Không thể cập nhật giao dịch. Vui lòng thử lại.");
+    }
+  };
+
   const renderItem = ({ item }: { item: MoneyRecord }) => (
     <View style={styles.recordItem}>
       <Image source={{ uri: item.imageUri }} style={styles.recordImage} />
@@ -196,6 +276,20 @@ export default function RecordsScreen() {
             ))}
           </ScrollView>
         )}
+      </View>
+      <View style={styles.recordActions}>
+        <TouchableOpacity
+          style={styles.editButton}
+          onPress={() => handleEditRecord(item)}
+        >
+          <FontAwesome name="pencil" size={16} color="#fff" />
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={styles.deleteButton}
+          onPress={() => handleDeleteRecord(item.id!)}
+        >
+          <FontAwesome name="trash" size={16} color="#fff" />
+        </TouchableOpacity>
       </View>
     </View>
   );
@@ -386,6 +480,126 @@ export default function RecordsScreen() {
                 onPress={handleAddRecord}
               >
                 <Text style={styles.buttonText}>Lưu</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Modal để sửa giao dịch */}
+      <Modal
+        animationType="slide"
+        transparent={true}
+        visible={editModalVisible}
+        onRequestClose={() => setEditModalVisible(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <Text style={styles.modalTitle}>Sửa Giao Dịch</Text>
+
+            <TextInput
+              style={styles.input}
+              placeholder="Tên người nhận/gửi"
+              value={newRecipient}
+              onChangeText={setNewRecipient}
+            />
+
+            <TextInput
+              style={styles.input}
+              placeholder="Số tiền"
+              value={newAmount}
+              onChangeText={setNewAmount}
+              keyboardType="numeric"
+            />
+
+            <View style={styles.hashtagContainer}>
+              <Text style={styles.hashtagLabel}>Hashtags:</Text>
+
+              {/* Selected hashtags */}
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={styles.selectedHashtags}
+              >
+                {selectedHashtags.map((hashtag, index) => (
+                  <TouchableOpacity
+                    key={index}
+                    style={styles.tagBadge}
+                    onPress={() => handleHashtagSelect(hashtag)}
+                  >
+                    <Text style={styles.tagText}>{hashtag}</Text>
+                    <FontAwesome
+                      name="times"
+                      size={12}
+                      color="#fff"
+                      style={styles.tagRemoveIcon}
+                    />
+                  </TouchableOpacity>
+                ))}
+              </ScrollView>
+
+              {/* New hashtag input */}
+              <View style={styles.newHashtagContainer}>
+                <TextInput
+                  style={styles.newHashtagInput}
+                  placeholder="Thêm hashtag mới"
+                  value={newHashtag}
+                  onChangeText={setNewHashtag}
+                />
+                <TouchableOpacity
+                  style={styles.newHashtagButton}
+                  onPress={handleAddHashtag}
+                >
+                  <Text style={styles.newHashtagButtonText}>Thêm</Text>
+                </TouchableOpacity>
+              </View>
+
+              {/* Available hashtags */}
+              {availableHashtags.length > 0 && (
+                <View>
+                  <Text style={styles.availableHashtagsLabel}>
+                    Hashtag đã có:
+                  </Text>
+                  <ScrollView
+                    horizontal
+                    showsHorizontalScrollIndicator={false}
+                    contentContainerStyle={styles.availableHashtags}
+                  >
+                    {availableHashtags
+                      .filter((tag) => !selectedHashtags.includes(tag))
+                      .map((hashtag, index) => (
+                        <TouchableOpacity
+                          key={index}
+                          style={styles.availableTagBadge}
+                          onPress={() => handleHashtagSelect(hashtag)}
+                        >
+                          <Text style={styles.availableTagText}>{hashtag}</Text>
+                          <FontAwesome
+                            name="plus"
+                            size={12}
+                            color="#3498db"
+                            style={styles.tagAddIcon}
+                          />
+                        </TouchableOpacity>
+                      ))}
+                  </ScrollView>
+                </View>
+              )}
+            </View>
+
+            <View style={styles.buttonRow}>
+              <TouchableOpacity
+                style={[styles.button, styles.cancelButton]}
+                onPress={() => setEditModalVisible(false)}
+              >
+                <Text style={styles.buttonText}>Hủy</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={[styles.button, styles.saveButton]}
+                onPress={handleUpdateRecord}
+              >
+                <Text style={styles.buttonText}>Cập nhật</Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -681,5 +895,20 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: "bold",
     color: "#2ecc71",
+  },
+  recordActions: {
+    flexDirection: "row",
+    alignItems: "center",
+  },
+  editButton: {
+    backgroundColor: "#3498db",
+    borderRadius: 8,
+    padding: 8,
+    marginRight: 8,
+  },
+  deleteButton: {
+    backgroundColor: "#e74c3c",
+    borderRadius: 8,
+    padding: 8,
   },
 });

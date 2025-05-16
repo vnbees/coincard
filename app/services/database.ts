@@ -83,6 +83,45 @@ export const searchRecords = async (query: string): Promise<MoneyRecord[]> => {
   }
 };
 
+export const updateRecord = async (record: MoneyRecord): Promise<void> => {
+  try {
+    const records = await getAllRecords();
+    const index = records.findIndex(r => r.id === record.id);
+    
+    if (index !== -1) {
+      // Cập nhật giao dịch
+      records[index] = record;
+      await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(records));
+      
+      // Cập nhật hashtags nếu có
+      if (record.hashtags && record.hashtags.length > 0) {
+        await addNewHashtags(record.hashtags);
+      }
+    } else {
+      throw new Error('Không tìm thấy giao dịch');
+    }
+  } catch (error) {
+    console.error('Error updating record:', error);
+    throw error;
+  }
+};
+
+export const deleteRecord = async (id: number): Promise<void> => {
+  try {
+    const records = await getAllRecords();
+    const filteredRecords = records.filter(record => record.id !== id);
+    
+    if (filteredRecords.length < records.length) {
+      await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(filteredRecords));
+    } else {
+      throw new Error('Không tìm thấy giao dịch');
+    }
+  } catch (error) {
+    console.error('Error deleting record:', error);
+    throw error;
+  }
+};
+
 export const getAllHashtags = async (): Promise<string[]> => {
   try {
     const hashtags = await AsyncStorage.getItem(HASHTAGS_STORAGE_KEY);
@@ -124,6 +163,8 @@ const DatabaseService = {
   saveRecord,
   getAllRecords,
   searchRecords,
+  updateRecord,
+  deleteRecord,
   getAllHashtags,
   saveHashtags,
   addNewHashtags,
