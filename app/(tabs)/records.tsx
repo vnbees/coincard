@@ -33,6 +33,12 @@ enum SortOrder {
   OLDEST = "oldest", // Cũ nhất
 }
 
+// Enum để định nghĩa các kiểu trường sắp xếp
+enum SortField {
+  AMOUNT = "amount", // Sắp xếp theo số tiền
+  DATE = "date", // Sắp xếp theo ngày
+}
+
 export default function RecordsScreen() {
   const [records, setRecords] = React.useState<MoneyRecord[]>([]);
   const [searchQuery, setSearchQuery] = React.useState("");
@@ -49,7 +55,10 @@ export default function RecordsScreen() {
   );
   const [totalAmount, setTotalAmount] = useState<number>(0);
   const [currentRecord, setCurrentRecord] = useState<MoneyRecord | null>(null);
-  const [sortOrder, setSortOrder] = useState<SortOrder>(SortOrder.DESC); // Mặc định sắp xếp giảm dần
+
+  // Thay thế sortOrder bằng sortField và sortDirection
+  const [sortField, setSortField] = useState<SortField>(SortField.AMOUNT);
+  const [sortDirection, setSortDirection] = useState<"asc" | "desc">("desc");
 
   // Tính tổng số tiền mỗi khi danh sách records thay đổi
   useEffect(() => {
@@ -59,6 +68,15 @@ export default function RecordsScreen() {
   const calculateTotalAmount = () => {
     const sum = records.reduce((total, record) => total + record.amount, 0);
     setTotalAmount(sum);
+  };
+
+  // Xác định SortOrder dựa trên sortField và sortDirection
+  const getCurrentSortOrder = (): SortOrder => {
+    if (sortField === SortField.AMOUNT) {
+      return sortDirection === "asc" ? SortOrder.ASC : SortOrder.DESC;
+    } else {
+      return sortDirection === "asc" ? SortOrder.OLDEST : SortOrder.NEWEST;
+    }
   };
 
   const loadRecords = async (query: string = "") => {
@@ -73,9 +91,12 @@ export default function RecordsScreen() {
         );
       }
 
+      // Lấy sortOrder hiện tại dựa trên sortField và sortDirection
+      const currentSortOrder = getCurrentSortOrder();
+
       // Sort records based on current sortOrder
       const sortedData = [...data].sort((a, b) => {
-        switch (sortOrder) {
+        switch (currentSortOrder) {
           case SortOrder.DESC: // Giảm dần theo số tiền
             return b.amount - a.amount;
           case SortOrder.ASC: // Tăng dần theo số tiền
@@ -319,9 +340,17 @@ export default function RecordsScreen() {
     </View>
   );
 
-  // Hàm để thay đổi thứ tự sắp xếp
-  const handleChangeSortOrder = (newOrder: SortOrder) => {
-    setSortOrder(newOrder);
+  // Hàm mới để xử lý khi người dùng nhấp vào nút sắp xếp
+  const handleSortPress = (field: SortField) => {
+    if (field === sortField) {
+      // Nếu nhấn vào cùng field, đảo ngược hướng sắp xếp
+      setSortDirection(sortDirection === "asc" ? "desc" : "asc");
+    } else {
+      // Nếu chuyển sang field khác, đặt field mới và hướng sắp xếp mặc định
+      setSortField(field);
+      setSortDirection("desc"); // Mặc định là giảm dần
+    }
+    // Tải lại dữ liệu với cách sắp xếp mới
     loadRecords(searchQuery);
   };
 
@@ -374,73 +403,43 @@ export default function RecordsScreen() {
 
       {/* UI lựa chọn cách sắp xếp */}
       <View style={styles.sortContainer}>
-        <Text style={styles.sortLabel}>Sắp xếp:</Text>
+        <Text style={styles.sortLabel}>Sắp xếp theo:</Text>
         <View style={styles.sortButtonsContainer}>
           <TouchableOpacity
             style={[
               styles.sortButton,
-              sortOrder === SortOrder.DESC && styles.activeSortButton,
+              sortField === SortField.AMOUNT && styles.activeSortButton,
             ]}
-            onPress={() => handleChangeSortOrder(SortOrder.DESC)}
+            onPress={() => handleSortPress(SortField.AMOUNT)}
           >
             <Text
               style={[
                 styles.sortButtonText,
-                sortOrder === SortOrder.DESC && styles.activeSortButtonText,
+                sortField === SortField.AMOUNT && styles.activeSortButtonText,
               ]}
             >
-              Số tiền tăng dần
+              Giá tiền{" "}
+              {sortField === SortField.AMOUNT &&
+                (sortDirection === "asc" ? "↑" : "↓")}
             </Text>
           </TouchableOpacity>
 
           <TouchableOpacity
             style={[
               styles.sortButton,
-              sortOrder === SortOrder.ASC && styles.activeSortButton,
+              sortField === SortField.DATE && styles.activeSortButton,
             ]}
-            onPress={() => handleChangeSortOrder(SortOrder.ASC)}
+            onPress={() => handleSortPress(SortField.DATE)}
           >
             <Text
               style={[
                 styles.sortButtonText,
-                sortOrder === SortOrder.ASC && styles.activeSortButtonText,
+                sortField === SortField.DATE && styles.activeSortButtonText,
               ]}
             >
-              Số tiền giảm dần
-            </Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={[
-              styles.sortButton,
-              sortOrder === SortOrder.NEWEST && styles.activeSortButton,
-            ]}
-            onPress={() => handleChangeSortOrder(SortOrder.NEWEST)}
-          >
-            <Text
-              style={[
-                styles.sortButtonText,
-                sortOrder === SortOrder.NEWEST && styles.activeSortButtonText,
-              ]}
-            >
-              Cũ nhất
-            </Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={[
-              styles.sortButton,
-              sortOrder === SortOrder.OLDEST && styles.activeSortButton,
-            ]}
-            onPress={() => handleChangeSortOrder(SortOrder.OLDEST)}
-          >
-            <Text
-              style={[
-                styles.sortButtonText,
-                sortOrder === SortOrder.OLDEST && styles.activeSortButtonText,
-              ]}
-            >
-              Mới nhất
+              Thời gian{" "}
+              {sortField === SortField.DATE &&
+                (sortDirection === "asc" ? "↑" : "↓")}
             </Text>
           </TouchableOpacity>
         </View>
