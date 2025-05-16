@@ -13,8 +13,16 @@
       "distribution": "internal",
       "android": {
         "buildType": "apk"
+      },
+      "env": {
+        "EXPO_USE_LEGACY_PEER_DEPS": "1"
       }
     },
     "production": {}
+  },
+  "cli": {
+    "version": ">= 5.9.1",
+    "requireCommit": false,
+    "appVersionSource": "remote"
   }
 }
