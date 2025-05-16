@@ -181,29 +181,25 @@ export default function RecordsScreen() {
   };
 
   const handleDeleteRecord = (id: number) => {
-    Alert.alert(
-      "Xác nhận xóa",
-      "Bạn có chắc muốn xóa giao dịch này không?",
-      [
-        {
-          text: "Hủy",
-          style: "cancel",
+    Alert.alert("Xác nhận xóa", "Bạn có chắc muốn xóa giao dịch này không?", [
+      {
+        text: "Hủy",
+        style: "cancel",
+      },
+      {
+        text: "Xóa",
+        style: "destructive",
+        onPress: async () => {
+          try {
+            await deleteRecord(id);
+            Alert.alert("Thành công", "Đã xóa giao dịch thành công");
+            await loadRecords(searchQuery);
+          } catch (error) {
+            Alert.alert("Lỗi", "Không thể xóa giao dịch. Vui lòng thử lại.");
+          }
         },
-        {
-          text: "Xóa",
-          style: "destructive",
-          onPress: async () => {
-            try {
-              await deleteRecord(id);
-              Alert.alert("Thành công", "Đã xóa giao dịch thành công");
-              await loadRecords(searchQuery);
-            } catch (error) {
-              Alert.alert("Lỗi", "Không thể xóa giao dịch. Vui lòng thử lại.");
-            }
-          },
-        },
-      ]
-    );
+      },
+    ]);
   };
 
   const handleUpdateRecord = async () => {
