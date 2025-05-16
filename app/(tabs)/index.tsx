@@ -12,6 +12,7 @@ import {
   Alert,
 } from "react-native";
 import { router } from "expo-router";
+import { useIsFocused } from "@react-navigation/native";
 import * as FileSystem from "expo-file-system";
 import { initDatabase, saveRecord } from "../services/database";
 import { FontAwesome } from "@expo/vector-icons";
@@ -32,6 +33,7 @@ export default function CameraScreen() {
   const [editableRecipient, setEditableRecipient] = useState("");
   const [editableAmount, setEditableAmount] = useState("");
   const cameraRef = useRef<CameraView>(null);
+  const isFocused = useIsFocused();
 
   useEffect(() => {
     initDatabase();
@@ -211,19 +213,24 @@ export default function CameraScreen() {
         />
         <Text style={styles.recordsButtonText}>Xem danh sách</Text>
       </TouchableOpacity>
-      <CameraView style={styles.camera} facing={facing} ref={cameraRef}>
-        <View style={styles.buttonContainer}>
-          <TouchableOpacity style={styles.button} onPress={toggleCameraFacing}>
-            <Text style={styles.text}>Lật camera</Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={[styles.button, styles.captureButton]}
-            onPress={takePhoto}
-          >
-            <View style={styles.captureButtonInner} />
-          </TouchableOpacity>
-        </View>
-      </CameraView>
+      {isFocused && (
+        <CameraView style={styles.camera} facing={facing} ref={cameraRef}>
+          <View style={styles.buttonContainer}>
+            <TouchableOpacity
+              style={styles.button}
+              onPress={toggleCameraFacing}
+            >
+              <Text style={styles.text}>Lật camera</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.button, styles.captureButton]}
+              onPress={takePhoto}
+            >
+              <View style={styles.captureButtonInner} />
+            </TouchableOpacity>
+          </View>
+        </CameraView>
+      )}
     </View>
   );
 }

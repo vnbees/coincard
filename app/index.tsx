@@ -74,7 +74,18 @@ export default function App() {
       const base64Time = Date.now() - base64StartTime;
       console.log("Base64 conversion time:", base64Time, "ms");
 
+      // Thêm kiểm tra kết nối mạng
+      const netInfo = await fetch("https://www.google.com", { method: "HEAD" })
+        .then(() => true)
+        .catch(() => false);
+
+      if (!netInfo) {
+        throw new Error("Không có kết nối mạng");
+      }
+
       const apiStartTime = Date.now();
+      console.log("Gửi yêu cầu đến API...");
+
       const response = await fetch(
         "https://us-central1-coincard-bd6c8.cloudfunctions.net/analyzeMoneyInImage",
         {
@@ -87,15 +98,31 @@ export default function App() {
           }),
         }
       );
+
       const apiResponseTime = Date.now() - apiStartTime;
       console.log("API call time:", apiResponseTime, "ms");
+      console.log("API response status:", response.status);
+
+      if (!response.ok) {
+        console.error("API Error Status:", response.status);
+        const errorText = await response.text();
+        console.error("API Error Text:", errorText);
+        throw new Error(`API trả về lỗi: ${response.status} ${errorText}`);
+      }
 
       const data = await response.json();
+      console.log(
+        "API response data:",
+        JSON.stringify(data).substring(0, 200) + "..."
+      );
+
       if (data.error) {
         throw new Error(data.error);
       }
 
       const result = parseAnalysisResponse(data.result);
+      console.log("Parsed result:", result);
+
       setAnalysisResult(result);
       setEditableRecipient(
         result.recipient !== "Not found" ? result.recipient : ""
@@ -103,7 +130,15 @@ export default function App() {
       setEditableAmount(result.amount.toString());
     } catch (error) {
       console.error("Failed to analyze photo:", error);
-      Alert.alert("Lỗi", "Không thể phân tích ảnh. Vui lòng thử lại.");
+
+      // Hiển thị thông báo lỗi chi tiết hơn
+      let errorMessage = "Không thể phân tích ảnh.";
+
+      if (error instanceof Error) {
+        errorMessage += " Lỗi: " + error.message;
+      }
+
+      Alert.alert("Lỗi", errorMessage);
     } finally {
       setAnalyzing(false);
     }
