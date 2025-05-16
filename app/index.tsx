@@ -268,7 +268,9 @@ export default function App() {
               style={styles.input}
               placeholder="Số tiền"
               value={formatMoney(editableAmount)}
-              onChangeText={(text) => setEditableAmount(parseFormattedMoney(text).toString())}
+              onChangeText={(text) =>
+                setEditableAmount(parseFormattedMoney(text).toString())
+              }
               keyboardType="numeric"
               placeholderTextColor="#999"
             />
