@@ -22,6 +22,7 @@ import {
   getAllHashtags,
   addNewHashtags,
 } from "../services/database";
+import { exportToExcel, prepareExportData } from "../services/excelExport";
 import { useFocusEffect } from "@react-navigation/native";
 import { FontAwesome } from "@expo/vector-icons";
 
@@ -55,6 +56,7 @@ export default function RecordsScreen() {
   );
   const [totalAmount, setTotalAmount] = useState<number>(0);
   const [currentRecord, setCurrentRecord] = useState<MoneyRecord | null>(null);
+  const [isExporting, setIsExporting] = useState(false);
 
   // Thay thế sortOrder bằng sortField và sortDirection
   const [sortField, setSortField] = useState<SortField>(SortField.AMOUNT);
@@ -368,6 +370,34 @@ export default function RecordsScreen() {
     return Number(value.replace(/,/g, ""));
   };
 
+  const handleExportToExcel = async () => {
+    if (records.length === 0) {
+      Alert.alert("Thông báo", "Không có dữ liệu để xuất.");
+      return;
+    }
+
+    setIsExporting(true);
+    try {
+      const exportData = prepareExportData(records);
+      const success = await exportToExcel(exportData);
+
+      if (success) {
+        Alert.alert(
+          "Thành công",
+          `Đã xuất ${records.length} bản ghi ra file Excel thành công!`,
+          [{ text: "OK" }]
+        );
+      } else {
+        Alert.alert("Lỗi", "Không thể xuất file Excel. Vui lòng thử lại.");
+      }
+    } catch (error) {
+      console.error("Export error:", error);
+      Alert.alert("Lỗi", "Đã xảy ra lỗi khi xuất file Excel.");
+    } finally {
+      setIsExporting(false);
+    }
+  };
+
   return (
     <View style={styles.container}>
       <TextInput
@@ -474,6 +504,28 @@ export default function RecordsScreen() {
           {totalAmount.toLocaleString()} VND
         </Text>
       </View>
+
+      {/* Nút Export Excel */}
+      <TouchableOpacity
+        style={[
+          styles.exportButton,
+          isExporting && styles.exportButtonDisabled,
+        ]}
+        onPress={handleExportToExcel}
+        disabled={isExporting || records.length === 0}
+      >
+        <FontAwesome
+          name={isExporting ? "spinner" : "file-excel-o"}
+          size={16}
+          color="#fff"
+          style={styles.exportIcon}
+        />
+        <Text style={styles.exportButtonText}>
+          {isExporting
+            ? "Đang xuất..."
+            : `Xuất Excel (${records.length} bản ghi)`}
+        </Text>
+      </TouchableOpacity>
 
       <FlatList
         style={styles.list}
@@ -1066,5 +1118,32 @@ const styles = StyleSheet.create({
   },
   activeSortButtonText: {
     color: "#fff",
+  },
+  exportButton: {
+    backgroundColor: "#27ae60",
+    borderRadius: 8,
+    padding: 12,
+    marginHorizontal: 16,
+    marginBottom: 16,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    elevation: 2,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+  },
+  exportButtonDisabled: {
+    backgroundColor: "#95a5a6",
+    opacity: 0.7,
+  },
+  exportIcon: {
+    marginRight: 8,
+  },
+  exportButtonText: {
+    color: "#fff",
+    fontSize: 16,
+    fontWeight: "bold",
   },
 });
